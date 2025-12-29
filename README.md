@@ -55,4 +55,4 @@ Flash the generated `.uf2` file to your RP2350 board.
 ## Credits
 
 Based on Waveshare's RP2350-Touch-LCD-3.49-LVGL demo.
-HID implementation inspired by TinyUSB examples.
+HID implementation inspired by TinyUSB examples and [pico_hid_device](https://github.com/Goodwill82/pico_hid_device).
