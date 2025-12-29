@@ -47,14 +47,12 @@ void event_handler(lv_event_t *e) {
     return;
 
   if (code == LV_EVENT_CLICKED) {
-    if (strcmp(id, "M1") == 0)
-      hid_run_macro(MACRO_ID_TYPING);
-    else if (strcmp(id, "M2") == 0)
-      hid_run_macro(MACRO_ID_ENTERR);
-    else if (strcmp(id, "M3") == 0)
-      hid_run_macro(MACRO_ID_TEST);
-
-    else if (strcmp(id, "LC") == 0) {
+    // Check if it's a macro button (starts with 'M')
+    if (id[0] == 'M' && id[1] >= '0' && id[1] <= '9') {
+      // Extract macro index from ID (e.g., "M0" -> 0, "M1" -> 1)
+      uint8_t macro_index = id[1] - '0';
+      hid_run_macro_by_index(macro_index);
+    } else if (strcmp(id, "LC") == 0) {
       hid_mouse_click(1); // Left click
     } else if (strcmp(id, "RC") == 0) {
       hid_mouse_click(2); // Right click
@@ -130,27 +128,40 @@ void Widgets_Init(void) {
   lv_obj_set_user_data(btn, "RC");
   lv_label_set_text(lv_label_create(btn), "R-Clk");
 
-  // Macro Buttons - Vertical stack
-  btn = lv_btn_create(lv_scr_act());
-  lv_obj_set_pos(btn, 36, 290);
-  lv_obj_set_size(btn, 100, 50);
-  lv_obj_add_event_cb(btn, event_handler, LV_EVENT_CLICKED, NULL);
-  lv_obj_set_user_data(btn, "M1");
-  lv_label_set_text(lv_label_create(btn), "1: Typing");
+  // Macro Buttons - Dynamic generation (up to 6 buttons)
+  uint8_t macro_count = hid_get_macro_count();
+  if (macro_count > 6)
+    macro_count = 6; // Limit to 6 buttons
 
-  btn = lv_btn_create(lv_scr_act());
-  lv_obj_set_pos(btn, 36, 350);
-  lv_obj_set_size(btn, 100, 50);
-  lv_obj_add_event_cb(btn, event_handler, LV_EVENT_CLICKED, NULL);
-  lv_obj_set_user_data(btn, "M2");
-  lv_label_set_text(lv_label_create(btn), "2: Enterr");
+  const int macro_start_y = 290;
+  const int macro_spacing = 60;
+  const int macro_width = 100;
+  const int macro_height = 50;
+  const int macro_x = 36;
 
-  btn = lv_btn_create(lv_scr_act());
-  lv_obj_set_pos(btn, 36, 410);
-  lv_obj_set_size(btn, 100, 50);
-  lv_obj_add_event_cb(btn, event_handler, LV_EVENT_CLICKED, NULL);
-  lv_obj_set_user_data(btn, "M3");
-  lv_label_set_text(lv_label_create(btn), "3: Test");
+  // Static storage for button IDs (needed because user_data must persist)
+  static char macro_ids[6][3]; // "M0", "M1", ... "M5"
+
+  for (uint8_t i = 0; i < macro_count; i++) {
+    btn = lv_btn_create(lv_scr_act());
+    lv_obj_set_pos(btn, macro_x, macro_start_y + (i * macro_spacing));
+    lv_obj_set_size(btn, macro_width, macro_height);
+    lv_obj_add_event_cb(btn, event_handler, LV_EVENT_CLICKED, NULL);
+
+    // Create ID string (e.g., "M0", "M1", etc.)
+    macro_ids[i][0] = 'M';
+    macro_ids[i][1] = '0' + i;
+    macro_ids[i][2] = '\0';
+    lv_obj_set_user_data(btn, macro_ids[i]);
+
+    // Get label from macro definition
+    const char *label = hid_get_macro_label(i);
+    if (label) {
+      lv_label_set_text(lv_label_create(btn), label);
+    } else {
+      lv_label_set_text_fmt(lv_label_create(btn), "Macro %d", i + 1);
+    }
+  }
 }
 
 static void disp_flush_cb(lv_disp_drv_t *disp, const lv_area_t *area,

@@ -10,11 +10,23 @@ void hid_app_task(void);
 bool send_key_press(uint8_t modifier, uint8_t key_code);
 bool send_key_release(void);
 
+// Macro Definition Structure
+typedef struct {
+  uint8_t modifier;
+  uint8_t key_code;
+} key_event_t;
+
+typedef struct {
+  const char *label;       // Button label (e.g., "Email", "Login")
+  const char *text;        // Optional: text to type (NULL if not used)
+  const key_event_t *keys; // Optional: array of special keys (NULL if not used)
+  uint8_t key_count;       // Number of keys in the array
+} macro_definition_t;
+
 // Macro API
-#define MACRO_ID_TYPING 1
-#define MACRO_ID_ENTERR 2
-#define MACRO_ID_TEST 3
-void hid_run_macro(uint8_t macro_id);
+uint8_t hid_get_macro_count(void);
+const char *hid_get_macro_label(uint8_t index);
+void hid_run_macro_by_index(uint8_t index);
 
 // Mouse API
 void hid_set_mouse_velocity(int8_t x, int8_t y);

@@ -47,15 +47,56 @@ void hid_mouse_click(uint8_t buttons) {
 //--------------------------------------------------------------------+
 // Macro State
 //--------------------------------------------------------------------+
-typedef struct {
-  uint8_t key_code;
-  uint8_t modifier;
-} key_event_t;
-
 #define MACRO_MAX_STEPS 64
 static key_event_t m_macro_queue[MACRO_MAX_STEPS];
 static uint8_t m_macro_head = 0;
 static uint8_t m_macro_tail = 0;
+
+// Helper macros for defining macro steps more cleanly
+#define KEY(k) {0, k}
+#define MOD_KEY(m, k) {m, k}
+
+//--------------------------------------------------------------------+
+// Macro Definitions (Static Array - will be loaded from SD card later)
+//--------------------------------------------------------------------+
+static const key_event_t macro_enterr_keys[] = {
+    KEY(HID_KEY_E),     KEY(HID_KEY_N),         KEY(HID_KEY_T),
+    KEY(HID_KEY_E),     KEY(HID_KEY_R),         KEY(HID_KEY_R),
+    KEY(HID_KEY_ENTER), KEY(HID_KEY_BACKSPACE), KEY(HID_KEY_BACKSPACE),
+};
+
+static const key_event_t macro_advanced_keys[] = {
+    KEY(HID_KEY_ENTER),
+    KEY(HID_KEY_TAB),
+    KEY(HID_KEY_ENTER),
+    KEY(HID_KEY_ENTER),
+    MOD_KEY(KEYBOARD_MODIFIER_LEFTCTRL, HID_KEY_S), // Ctrl+S
+};
+
+static const macro_definition_t g_macro_definitions[] = {
+    // Simple text macros
+    {.label = "Typing", .text = "typing", .keys = NULL, .key_count = 0},
+    {.label = "Hi!", .text = "Hi!", .keys = NULL, .key_count = 0},
+    {.label = "Email",
+     .text = "user@example.com",
+     .keys = NULL,
+     .key_count = 0},
+
+    // Complex macro with keys only
+    {.label = "Enterr",
+     .text = NULL,
+     .keys = macro_enterr_keys,
+     .key_count = 9},
+
+    // Advanced: text + special keys (demonstrates future capability)
+    {.label = "Advanced",
+     .text = "Hello World",
+     .keys = macro_advanced_keys,
+     .key_count = 5},
+};
+
+#define MACRO_COUNT                                                            \
+  (sizeof(g_macro_definitions) / sizeof(g_macro_definitions[0]))
 
 static void macro_queue_add(uint8_t modifier, uint8_t key_code) {
   uint8_t next = (m_macro_head + 1) % MACRO_MAX_STEPS;
@@ -66,32 +107,218 @@ static void macro_queue_add(uint8_t modifier, uint8_t key_code) {
   }
 }
 
-void hid_run_macro(uint8_t macro_id) {
-  // Helper macro to add text
-  // "typing"
-  if (macro_id == MACRO_ID_TYPING) {
-    macro_queue_add(0, HID_KEY_T);
-    macro_queue_add(0, HID_KEY_Y);
-    macro_queue_add(0, HID_KEY_P);
-    macro_queue_add(0, HID_KEY_I);
-    macro_queue_add(0, HID_KEY_N);
-    macro_queue_add(0, HID_KEY_G);
+// Helper: Convert ASCII character to HID keycode and modifier
+static bool ascii_to_hid(char c, uint8_t *modifier, uint8_t *keycode) {
+  *modifier = 0;
+  *keycode = 0;
+
+  // Lowercase letters
+  if (c >= 'a' && c <= 'z') {
+    *keycode = HID_KEY_A + (c - 'a');
+    return true;
   }
-  // "enterr" + Enter + Backspace x2
-  else if (macro_id == MACRO_ID_ENTERR) {
-    macro_queue_add(0, HID_KEY_E);
-    macro_queue_add(0, HID_KEY_N);
-    macro_queue_add(0, HID_KEY_T);
-    macro_queue_add(0, HID_KEY_E);
-    macro_queue_add(0, HID_KEY_R);
-    macro_queue_add(0, HID_KEY_R);
-    macro_queue_add(0, HID_KEY_ENTER);
-    // User wants to back out of the Enter AND the second 'r'.
-    macro_queue_add(0, HID_KEY_BACKSPACE);
-    macro_queue_add(0, HID_KEY_BACKSPACE);
-  } else if (macro_id == MACRO_ID_TEST) {
-    macro_queue_add(KEYBOARD_MODIFIER_LEFTSHIFT, HID_KEY_H); // H
-    macro_queue_add(0, HID_KEY_I);                           // i
+  // Uppercase letters
+  if (c >= 'A' && c <= 'Z') {
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_A + (c - 'A');
+    return true;
+  }
+  // Numbers
+  if (c >= '1' && c <= '9') {
+    *keycode = HID_KEY_1 + (c - '1');
+    return true;
+  }
+  if (c == '0') {
+    *keycode = HID_KEY_0;
+    return true;
+  }
+
+  // Special characters
+  switch (c) {
+  case ' ':
+    *keycode = HID_KEY_SPACE;
+    break;
+  case '\n':
+    *keycode = HID_KEY_ENTER;
+    break;
+  case '\t':
+    *keycode = HID_KEY_TAB;
+    break;
+  case '-':
+    *keycode = HID_KEY_MINUS;
+    break;
+  case '=':
+    *keycode = HID_KEY_EQUAL;
+    break;
+  case '[':
+    *keycode = HID_KEY_BRACKET_LEFT;
+    break;
+  case ']':
+    *keycode = HID_KEY_BRACKET_RIGHT;
+    break;
+  case '\\':
+    *keycode = HID_KEY_BACKSLASH;
+    break;
+  case ';':
+    *keycode = HID_KEY_SEMICOLON;
+    break;
+  case '\'':
+    *keycode = HID_KEY_APOSTROPHE;
+    break;
+  case '`':
+    *keycode = HID_KEY_GRAVE;
+    break;
+  case ',':
+    *keycode = HID_KEY_COMMA;
+    break;
+  case '.':
+    *keycode = HID_KEY_PERIOD;
+    break;
+  case '/':
+    *keycode = HID_KEY_SLASH;
+    break;
+
+  // Shifted special characters
+  case '!':
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_1;
+    break;
+  case '@':
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_2;
+    break;
+  case '#':
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_3;
+    break;
+  case '$':
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_4;
+    break;
+  case '%':
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_5;
+    break;
+  case '^':
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_6;
+    break;
+  case '&':
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_7;
+    break;
+  case '*':
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_8;
+    break;
+  case '(':
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_9;
+    break;
+  case ')':
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_0;
+    break;
+  case '_':
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_MINUS;
+    break;
+  case '+':
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_EQUAL;
+    break;
+  case '{':
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_BRACKET_LEFT;
+    break;
+  case '}':
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_BRACKET_RIGHT;
+    break;
+  case '|':
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_BACKSLASH;
+    break;
+  case ':':
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_SEMICOLON;
+    break;
+  case '"':
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_APOSTROPHE;
+    break;
+  case '~':
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_GRAVE;
+    break;
+  case '<':
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_COMMA;
+    break;
+  case '>':
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_PERIOD;
+    break;
+  case '?':
+    *modifier = KEYBOARD_MODIFIER_LEFTSHIFT;
+    *keycode = HID_KEY_SLASH;
+    break;
+
+  default:
+    return false;
+  }
+  return true;
+}
+
+// Helper: Type a string (automatically converts ASCII to HID keycodes)
+static void macro_type_string(const char *str) {
+  uint8_t modifier, keycode;
+  while (*str) {
+    if (ascii_to_hid(*str, &modifier, &keycode)) {
+      macro_queue_add(modifier, keycode);
+    }
+    str++;
+  }
+}
+
+// Helper: Add an array of macro steps (for combining strings with special keys)
+static void macro_add_steps(const key_event_t *steps, uint8_t count) {
+  for (uint8_t i = 0; i < count; i++) {
+    macro_queue_add(steps[i].modifier, steps[i].key_code);
+  }
+}
+
+//--------------------------------------------------------------------+
+// Macro API Implementation
+//--------------------------------------------------------------------+
+
+// Get the number of defined macros
+uint8_t hid_get_macro_count(void) { return MACRO_COUNT; }
+
+// Get the label for a macro at the given index
+const char *hid_get_macro_label(uint8_t index) {
+  if (index >= MACRO_COUNT) {
+    return NULL;
+  }
+  return g_macro_definitions[index].label;
+}
+
+// Execute a macro by index
+void hid_run_macro_by_index(uint8_t index) {
+  if (index >= MACRO_COUNT) {
+    return;
+  }
+
+  const macro_definition_t *macro = &g_macro_definitions[index];
+
+  // First, type any text if present
+  if (macro->text != NULL) {
+    macro_type_string(macro->text);
+  }
+
+  // Then, add any special keys if present
+  if (macro->keys != NULL && macro->key_count > 0) {
+    macro_add_steps(macro->keys, macro->key_count);
   }
 }
 
