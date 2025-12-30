@@ -8,7 +8,13 @@ USB HID Keyboard and Mouse implementation for the Waveshare RP2350 Touch LCD 3.4
 - **Touch Screen UI**: LVGL-based interface with:
   - Mouse D-Pad (Up/Down/Left/Right) with continuous movement
   - Left/Right Click buttons
-  - 3 Programmable macro buttons
+  - Up to 6 Programmable macro buttons with tooltips
+- **Advanced Macro System**: 
+  - Dynamic macro creation with text, keys, and delays
+  - ASCII-to-HID conversion with proper modifier handling
+  - Configurable delays between keystrokes
+  - Optional comments/tooltips for each macro
+  - Future SD card loading support
 - **Background Macro Engine**: Queue-based keystroke system prevents missed keys
 - **Concurrent Operation**: LCD and USB HID run simultaneously without blocking
 
@@ -22,11 +28,45 @@ USB HID Keyboard and Mouse implementation for the Waveshare RP2350 Touch LCD 3.4
 
 ## Macros
 
-The three macro buttons are pre-programmed:
+The device features a sophisticated macro system with up to 6 programmable macro buttons. Macros support:
 
-1. **"Typing"**: Types the word "typing"
-2. **"Enterr"**: Types "enterr", presses Enter, then backspaces twice to correct
-3. **"Test"**: Types "Hi"
+- **Text Typing**: Automatic ASCII-to-HID conversion with proper shift handling
+- **Special Keys**: ENTER, TAB, ESC, arrow keys, etc.
+- **Modifier Combinations**: CTRL+C, ALT+F4, SHIFT+key, etc.
+- **Delays**: Configurable pauses between keystrokes (up to 65 seconds)
+- **Comments**: Optional tooltips for UI display
+
+### Current Example Macros
+
+1. **"Email Login"**: `"user@example.com" TAB "password" ENTER`
+   - *Login to email account with username and password*
+
+2. **"Save Document"**: `CTRL+S`
+   - *Save the current document*
+
+3. **"Complex Macro"**: `"Hello World!" DELAY(500) CTRL+A "replaced" ENTER`
+   - *Type greeting, wait, select all, replace with 'replaced'*
+
+4. **"Simple Text"**: `"Just type this text"`
+
+### Future: SD Card Macro Loading
+
+Macros can be loaded from human-editable `.txt` files on SD card:
+
+```
+Email Login
+"user@example.com" TAB "password" ENTER
+"Login to email account with username and password"
+
+Save Document
+CTRL+S
+"Save the current document"
+```
+
+**Planned Features:**
+- Hot-pluggable macro files
+- Multiple macro sets per SD card
+- Real-time macro editing and reloading
 
 ## Building
 
