@@ -1,6 +1,9 @@
 # RP2350 Touch LCD 3.49" - HID Keyboard & Mouse
 
 USB HID Keyboard and Mouse implementation for the Waveshare RP2350 Touch LCD 3.49" display.
+See https://www.waveshare.com/wiki/RP2350-Touch-LCD-3.49 
+and https://www.waveshare.com/rp2350-touch-lcd-3.49.htm 
+for device. 
 
 ## Features
 
