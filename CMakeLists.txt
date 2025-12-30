@@ -1,8 +1,10 @@
 # == DO NOT EDIT THE FOLLOWING LINES for the Raspberry Pi Pico VS Code Extension to work ==
 if(WIN32)
     set(USERHOME $ENV{USERPROFILE})
+    add_compile_definitions(WINDOWS_BUILD)
 else()
     set(USERHOME $ENV{HOME})
+    add_compile_definitions(LINUX_BUILD)
 endif()
 set(sdkVersion 2.2.0)
 set(toolchainVersion 14_2_Rel1)
